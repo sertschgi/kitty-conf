@@ -15,14 +15,12 @@ from kitty.tab_bar import (
 
 opts = get_options()
 icon_fg = as_rgb(color_as_int(opts.color16))
-icon_bg = as_rgb(color_as_int(opts.color8))
+icon_bg = as_rgb(color_as_int(opts.color2))
 bat_text_color = as_rgb(color_as_int(opts.color15))
 clock_color = as_rgb(color_as_int(opts.color15))
 date_color = as_rgb(color_as_int(opts.color8))
-SEPARATOR_BEGIN, SEPARATOR_END = ("◥", "")
 RIGHT_MARGIN = 1
 REFRESH_TIME = 1
-ICON = ""
 UNPLUGGED_ICONS = {
     10: "",
     20: "",
@@ -50,21 +48,6 @@ PLUGGED_COLORS = {
 }
 
 
-def _draw_icon(screen: Screen, index: int, draw_data: DrawData) -> int:
-    if index != 1:
-        return 0
-    fg, bg = screen.cursor.fg, screen.cursor.bg
-    screen.cursor.fg = icon_fg
-    screen.cursor.bg = icon_bg
-    screen.draw(" " + ICON + " ")
-    screen.cursor.bg = as_rgb(int(draw_data.default_bg))
-    screen.cursor.fg = icon_bg
-    screen.draw(SEPARATOR_END)
-    screen.cursor.fg, screen.cursor.bg = fg, bg
-    screen.cursor.x = 2 + len(ICON) + len(SEPARATOR_END)
-    return screen.cursor.x
-
-
 def _draw_left_status(
     draw_data: DrawData,
     screen: Screen,
@@ -74,21 +57,26 @@ def _draw_left_status(
     index: int,
     is_last: bool,
     extra_data: ExtraData,
-) -> int:
-    tab_bg = screen.cursor.bg
-    default_bg = as_rgb(int(draw_data.default_bg))
-    screen.cursor.fg = tab_bg
-    screen.cursor.bg = default_bg
-    screen.draw(SEPARATOR_BEGIN)
-    screen.cursor.bg = tab_bg
+):
+    bg = as_rgb(draw_data.tab_bg(tab))
+    fg = as_rgb(draw_data.tab_fg(tab))
+    sep_bg = as_rgb(int(draw_data.default_bg))
+    sep = draw_data.sep
+
+    if index > 1:
+        screen.cursor.fg = sep_bg
+        screen.cursor.bg = bg
+        screen.draw(sep)
+
+    screen.cursor.fg = fg
+    screen.cursor.bg = bg
     screen.draw(" ")
     draw_title(draw_data, screen, tab, index)
     screen.draw(" ")
-    screen.cursor.fg = tab_bg
-    screen.cursor.bg = default_bg
-    screen.draw(SEPARATOR_END)
-    end = screen.cursor.x
-    return end
+
+    screen.cursor.fg = bg
+    screen.cursor.bg = sep_bg
+    screen.draw(sep)
 
 
 def _draw_right_status(screen: Screen, is_last: bool, cells: list) -> int:
@@ -172,7 +160,6 @@ def draw_tab(
     for cell in cells:
         right_status_length += len(str(cell[1]))
 
-    _draw_icon(screen, index, draw_data)
     _draw_left_status(
         draw_data,
         screen,
